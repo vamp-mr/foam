@@ -25,7 +25,12 @@ RUN apt-get update && apt-get upgrade -y && \
     python3-venv \
     python3-dev \
     libprotobuf-dev \
-    curl && \
+    curl \
+    libgl1 \
+    libglu1-mesa \
+    libgl1-mesa-dri \
+    mesa-utils \
+    x11-apps && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

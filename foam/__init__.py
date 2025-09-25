@@ -256,12 +256,32 @@ class SpherizationHelper:
 
     def get_spherization(self, name: str, depth: int = 1, branch: int = 8, cache: bool = True) -> Spherization:
         if not self.db.exists(name, branch, depth):
-            spherization = self.ps.get(name)
+            spherizations = self.ps.get(name)
             if cache:
-                for level, sphere_level in enumerate(spherization):
+                for level, sphere_level in enumerate(spherizations):
                     self.db.add(name, branch, level, sphere_level)
 
-            return spherization[depth]
+            return self._select_level(spherizations, depth)
 
-        else:
-            return self.db.get(name, branch, depth)
+        return self._select_cached_level(name, branch, depth)
+
+    @staticmethod
+    def _select_level(levels: list[Spherization], depth: int) -> Spherization:
+        if not levels:
+            raise RuntimeError("No spherization levels were generated.")
+
+        max_depth = min(depth, len(levels) - 1)
+        for level in range(max_depth, -1, -1):
+            if len(levels[level].spheres) > 0:
+                return levels[level]
+
+        return levels[max_depth]
+
+    def _select_cached_level(self, name: str, branch: int, depth: int) -> Spherization:
+        for level in range(depth, -1, -1):
+            if self.db.exists(name, branch, level):
+                candidate = self.db.get(name, branch, level)
+                if len(candidate.spheres) > 0:
+                    return candidate
+
+        return self.db.get(name, branch, depth)
