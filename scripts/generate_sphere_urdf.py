@@ -42,7 +42,7 @@ def main(
 
     urdf = load_urdf(Path(filename))
     meshes = get_urdf_meshes(urdf, shrinkage)
-
+    depth_used = []
     for mesh in meshes:
 
         # branch_value = max(
@@ -51,13 +51,20 @@ def main(
 
         center, radius = minimum_nsphere(mesh.mesh.vertices)
         vr = Sphere(radius, center).volume / mesh.mesh.volume
+        print(mesh.name, "Volume ratio:", vr)
         branch_value = min(int(vr * volume_heuristic_ratio), branch)
+        depth_value = depth
 
         key = mesh.name.split(":")[0]
         if key in kwargs:
-            branch_value = int(kwargs[key] * branch_value)
+            print("  Applying branch from args:", kwargs[key])
+            branch_value = int(kwargs[key])
+        if key + "_depth" in kwargs:
+            print("  Applying depth from args:", kwargs[key + "_depth"])
+            depth_value = int(kwargs[key + "_depth"])
 
-        print(f"Link::Mesh: {mesh.name}\n  Target Spheres: {branch_value}")
+        depth_used.append(depth_value)
+        print(f"Link::Mesh: {mesh.name}\n  Target Spheres: {branch_value}, Depth: {depth_value}")
 
         sh.spherize_mesh(
             mesh.name,
@@ -66,7 +73,7 @@ def main(
             mesh.xyz,
             method,
             mesh.rpy,
-            depth=depth,
+            depth=depth_value,
             branch=branch_value,
             testerLevels=testerLevels,
             numCover=numCover,
@@ -89,16 +96,21 @@ def main(
             )
 
     primitives = get_urdf_primitives(urdf, shrinkage)
+    depth_primitives = []
     for primitive in primitives:
         center, radius = minimum_nsphere(primitive.mesh.vertices)
         vr = Sphere(radius, center).volume / primitive.mesh.volume
         branch_value = min(int(vr * volume_heuristic_ratio), branch)
+        depth_value = depth
 
         key = primitive.name.split(":")[0]
         if key in kwargs:
             branch_value = int(kwargs[key] * branch_value)
+        if key + "_depth" in kwargs:
+            depth_value = int(kwargs[key + "_depth"])
 
-        print(primitive.name, vr, branch_value)
+        depth_primitives.append(depth_value)
+        print(f"primitive name {primitive.name}, vr {vr}, branch_value {branch_value}, depth_value {depth_value}")
 
         sh.spherize_mesh(
             primitive.name,
@@ -107,7 +119,7 @@ def main(
             primitive.xyz,
             method,
             primitive.rpy,
-            depth=depth,
+            depth=depth_value,
             branch=branch_value,
             testerLevels=testerLevels,
             numCover=numCover,
@@ -129,10 +141,10 @@ def main(
 
             )
 
-    mesh_spheres = {mesh.name: sh.get_spherization(mesh.name, depth, branch) for mesh in meshes}
+    mesh_spheres = {mesh.name: sh.get_spherization(mesh.name, depth_used[i], branch) for i, mesh in enumerate(meshes)}
     primitive_spheres = {
-        primitive.name: sh.get_spherization(primitive.name, depth, branch, cache = False)
-        for primitive in primitives
+        primitive.name: sh.get_spherization(primitive.name, depth_primitives[i], branch, cache = False)
+        for i, primitive in enumerate(primitives)
         }
 
     set_urdf_spheres(urdf, mesh_spheres | primitive_spheres)
