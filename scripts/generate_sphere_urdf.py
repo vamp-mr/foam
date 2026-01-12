@@ -51,8 +51,8 @@ def main(
 
         center, radius = minimum_nsphere(mesh.mesh.vertices)
         vr = Sphere(radius, center).volume / mesh.mesh.volume
-        print(mesh.name, "Volume ratio:", vr)
-        branch_value = min(int(vr * volume_heuristic_ratio), branch)
+        branch_value = min(int(max(1.0, vr * volume_heuristic_ratio)), branch)
+        print(mesh.name, "Volume ratio:", vr, "branch value :", branch_value)
         depth_value = depth
 
         key = mesh.name.split(":")[0]
@@ -141,7 +141,13 @@ def main(
 
             )
 
-    mesh_spheres = {mesh.name: sh.get_spherization(mesh.name, depth_used[i], branch) for i, mesh in enumerate(meshes)}
+    mesh_spheres = dict()
+    for i, mesh in enumerate(meshes):
+        print(f"Get spheres for meshes {i} {mesh.name}")
+        spheres = sh.get_spherization(mesh.name, depth_used[i], branch)
+        mesh_spheres[mesh.name] = spheres
+
+    #mesh_spheres = {mesh.name: sh.get_spherization(mesh.name, depth_used[i], branch) for i, mesh in enumerate(meshes)}
     primitive_spheres = {
         primitive.name: sh.get_spherization(primitive.name, depth_primitives[i], branch, cache = False)
         for i, primitive in enumerate(primitives)
